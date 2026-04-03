@@ -40,6 +40,90 @@ async def handle_image(url, update, msg):
         ok, size = check_size(filename)
         if not ok:
             os.remove(filename)
+            await msg.edit_text(f"❌ الصورة كبيرة جداً ({size:.1f}MB)")
+            return
+
+        await msg.edit_text("📤 جاري إرسال الصورة...")
+        with open(filename, "rb") as img:
+            await update.message.reply_photo(photo=img)
+
+        os.remove(filename)
+        await msg.delete()
+
+    except Exception as e:
+        await msg.edit_text(f"❌ فشل تنزيل الصورة: {str(e)}")
+
+async def download_pinterest(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text.strip()
+
+    urls = re.findall(r'https?://[^\s]+', text)
+    if not urls:
+        await update.message.reply_text("❌ ما لقيت رابط في رسالتك")
+        return
+
+    url = urls[0]
+
+    if "pinterest.com" not in url and "pin.it" not in url:
+        await update.message.reply_text("❌ أرسل رابط Pinterest فقط")
+        return
+
+    msg = await update.message.reply_text("⏳ جاري التحليل...")
+
+    try:
+        ydl_opts_check = {
+            "quiet": True,
+            "skip_download": True,
+            "format": None,
+        }
+        with yt_dlp.YoutubeDL(ydl_opts_check) as ydl:
+            info = ydl.extract_info(url, download=False)
+
+        is_video = info.get("vcodec") not in [None, "none"]
+
+        if not is_video:
+            await msg.edit_text("🖼️ تم اكتشاف صورة، جاري التنزيل...")
+            await handle_image(url, update, msg)
+            return
+
+        await msg.edit_text("⏳ جاري تنزيل الفيديو...")
+
+        ydl_opts = {
+            "outtmpl": "/tmp/%(id)s.%(ext)s",
+            "quiet": True,
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+
+        ok, size = check_size(filename)
+        if not ok:
+            os.remove(filename)
+            await msg.edit_text(f"❌ الفيديو كبير جداً ({size:.1f}MB)")
+            return
+
+        await msg.edit_text(f"📤 جاري الإرسال... ({size:.1f}MB)")
+
+        with open(filename, "rb") as video:
+            await update.message.reply_video(video=video)
+
+        os.remove(filename)
+        await msg.delete()
+
+    except Exception as e:
+        await msg.edit_text(f"❌ فشل التنزيل:\n{str(e)}")
+
+app = ApplicationBuilder().token(TOKEN).build()
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_pinterest))
+
+print("✅ البوت شغال...")
+app.run_polling()        with open(filename, "wb") as f:
+            f.write(response.content)
+
+        ok, size = check_size(filename)
+        if not ok:
+            os.remove(filename)
             await msg.edit_text(f"❌ الصورة كبيرة جداً ({size:.1f}MB) - الحد الأقصى {MAX_SIZE_MB}MB")
             return
 
