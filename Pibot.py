@@ -34,93 +34,53 @@ async def download_pinterest(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text("❌ أرسل رابط Pinterest فقط")
         return
 
-    msg = await update.message.reply_text("⏳ جاري التحليل...")
+    msg = await update.message.reply_text("⏳ جاري التنزيل...")
 
     try:
-        ydl_opts_check = {
+        ydl_opts = {
+            "outtmpl": "/tmp/%(id)s.%(ext)s",
             "quiet": True,
-            "skip_download": True,
             "no_check_formats": True,
+            "http_headers": {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Referer": "https://www.pinterest.com/",
+            },
         }
-        with yt_dlp.YoutubeDL(ydl_opts_check) as ydl:
-            info = ydl.extract_info(url, download=False)
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
 
         is_video = info.get("vcodec") not in [None, "none"]
 
+        if not os.path.exists(filename):
+            for f in os.listdir("/tmp"):
+                if info.get("id", "") in f:
+                    filename = f"/tmp/{f}"
+                    break
+
+        ok, size = check_size(filename)
+
+        if size < 0.01:
+            os.remove(filename)
+            await msg.edit_text("❌ الملف فارغ، جرب رابط ثاني")
+            return
+
+        if not ok:
+            os.remove(filename)
+            await msg.edit_text(f"❌ الملف كبير جداً ({size:.1f}MB)")
+            return
+
+        await msg.edit_text(f"📤 جاري الإرسال... ({size:.1f}MB)")
+
         if is_video:
-            await msg.edit_text("⏳ جاري تنزيل الفيديو...")
-
-            formats = info.get("formats", [])
-            best_url = None
-            best_size = 0
-
-            for f in formats:
-                if (f.get("vcodec") not in [None, "none"]
-                        and f.get("url")
-                        and f.get("filesize", 0) and f.get("filesize", 0) > best_size):
-                    best_url = f["url"]
-                    best_size = f.get("filesize", 0)
-
-            if not best_url:
-                for f in reversed(formats):
-                    if f.get("vcodec") not in [None, "none"] and f.get("url"):
-                        best_url = f["url"]
-                        break
-
-            if not best_url:
-                best_url = info.get("url")
-
-            headers = {
-                "User-Agent": "Mozilla/5.0",
-                "Referer": "https://www.pinterest.com/",
-            }
-
-            filename = "/tmp/video.mp4"
-            r = requests.get(best_url, headers=headers, stream=True, timeout=60)
-            with open(filename, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-
-            ok, size = check_size(filename)
-            if not ok:
-                os.remove(filename)
-                await msg.edit_text(f"❌ الفيديو كبير جداً ({size:.1f}MB)")
-                return
-
-            if size < 0.01:
-                os.remove(filename)
-                await msg.edit_text("❌ الفيديو فارغ، جرب رابط ثاني")
-                return
-
-            await msg.edit_text(f"📤 جاري الإرسال... ({size:.1f}MB)")
             with open(filename, "rb") as video:
                 await update.message.reply_video(video=video)
-            os.remove(filename)
-
         else:
-            thumb = info.get("thumbnail") or info.get("url")
-            if not thumb:
-                await msg.edit_text("❌ ما قدرت أجيب الصورة")
-                return
-
-            await msg.edit_text("🖼️ جاري تنزيل الصورة...")
-            headers = {"User-Agent": "Mozilla/5.0"}
-            response = requests.get(thumb, headers=headers, timeout=15)
-            filename = "/tmp/image.jpg"
-            with open(filename, "wb") as f:
-                f.write(response.content)
-
-            ok, size = check_size(filename)
-            if not ok:
-                os.remove(filename)
-                await msg.edit_text(f"❌ الصورة كبيرة جداً ({size:.1f}MB)")
-                return
-
-            await msg.edit_text("📤 جاري إرسال الصورة...")
             with open(filename, "rb") as img:
                 await update.message.reply_photo(photo=img)
-            os.remove(filename)
 
+        os.remove(filename)
         await msg.delete()
 
     except Exception as e:
