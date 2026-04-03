@@ -41,7 +41,7 @@ async def download_pinterest(update: Update, context: ContextTypes.DEFAULT_TYPE)
             "outtmpl": "/tmp/%(id)s.%(ext)s",
             "quiet": True,
             "no_check_formats": True,
-            "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+            "format": "best",
             "http_headers": {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                 "Referer": "https://www.pinterest.com/",
@@ -59,7 +59,6 @@ async def download_pinterest(update: Update, context: ContextTypes.DEFAULT_TYPE)
                     break
 
         is_video = info.get("vcodec") not in [None, "none"]
-
         ok, size = check_size(filename)
 
         if size < 0.01:
