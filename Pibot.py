@@ -41,6 +41,7 @@ async def download_pinterest(update: Update, context: ContextTypes.DEFAULT_TYPE)
             "outtmpl": "/tmp/%(id)s.%(ext)s",
             "quiet": True,
             "no_check_formats": True,
+            "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
             "http_headers": {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                 "Referer": "https://www.pinterest.com/",
@@ -51,13 +52,13 @@ async def download_pinterest(update: Update, context: ContextTypes.DEFAULT_TYPE)
             info = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
 
-        is_video = info.get("vcodec") not in [None, "none"]
-
         if not os.path.exists(filename):
             for f in os.listdir("/tmp"):
                 if info.get("id", "") in f:
                     filename = f"/tmp/{f}"
                     break
+
+        is_video = info.get("vcodec") not in [None, "none"]
 
         ok, size = check_size(filename)
 
