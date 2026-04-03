@@ -39,7 +39,7 @@ async def handle_image(url, update, msg):
             return
         
         response = requests.get(thumb, headers=headers, timeout=15)
-        filename = "image.jpg"
+        filename = "/tmp/image.jpg"
         with open(filename, "wb") as f:
             f.write(response.content)
         
@@ -86,7 +86,7 @@ async def download_pinterest(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await msg.edit_text("⏳ جاري تنزيل الفيديو...")
         
         ydl_opts = {
-            "outtmpl": "%(id)s.%(ext)s",
+            "outtmpl": "/tmp/%(id)s.%(ext)s",
             "quiet": True,
             "format": "best[ext=mp4]/best",
         }
