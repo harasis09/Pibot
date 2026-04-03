@@ -5,7 +5,7 @@ from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, CommandHandler, filters, ContextTypes
 
 import os
-TOKEN = os.environ.get("8625678799:AAHiW4CLCoOTihBVHItUTZDSF83n1Bg3LDU")
+TOKEN = os.environ.get("TOKEN")
 
 MAX_SIZE_MB = 50  # الحد الأقصى لحجم الملف
 
